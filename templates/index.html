@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎓 Smart Study Buddy Assistant</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1 class="title">
+                    <i class="fas fa-graduation-cap"></i>
+                    Smart Study Buddy
+                </h1>
+                <p class="subtitle">AI-powered learning assistant with intelligent model routing</p>
+            </div>
+            
+            <!-- Stats Panel -->
+            <div class="stats-panel">
+                <div class="stat-item">
+                    <i class="fas fa-question-circle"></i>
+                    <span class="stat-label">Queries</span>
+                    <span class="stat-value" id="query-count">0</span>
+                </div>
+                <div class="stat-item">
+                    <i class="fas fa-dollar-sign"></i>
+                    <span class="stat-label">Cost</span>
+                    <span class="stat-value" id="session-cost">$0.00</span>
+                </div>
+                <div class="stat-item">
+                    <i class="fas fa-clock"></i>
+                    <span class="stat-label">Time</span>
+                    <span class="stat-value" id="session-time">0m</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Query Form -->
+            <div class="query-section">
+                <form id="query-form" class="query-form">
+                    <div class="form-group">
+                        <label for="query">Your Question</label>
+                        <textarea 
+                            id="query" 
+                            name="query" 
+                            placeholder="Ask me anything! I'll automatically detect the subject and difficulty level, then route your question to the best AI model..."
+                            rows="4"
+                            required
+                        ></textarea>
+                        <div class="query-hint">
+                            <i class="fas fa-lightbulb"></i>
+                            <span>Just type your question naturally - I'll figure out the rest!</span>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="submit-btn" id="submit-btn">
+                        <i class="fas fa-paper-plane"></i>
+                        Ask Study Buddy
+                    </button>
+                </form>
+            </div>
+
+            <!-- Response Section -->
+            <div class="response-section" id="response-section" style="display: none;">
+                <div class="response-header">
+                    <h3><i class="fas fa-robot"></i> Study Buddy Response</h3>
+                    <div class="response-meta" id="response-meta"></div>
+                </div>
+                <div class="response-detection" id="response-detection"></div>
+                <div class="response-content" id="response-content"></div>
+            </div>
+
+            <!-- Loading State -->
+            <div class="loading" id="loading" style="display: none;">
+                <div class="loading-spinner"></div>
+                <p>Analyzing your question and routing to the best AI model...</p>
+            </div>
+
+            <!-- Example Queries -->
+            <div class="examples-section">
+                <h3><i class="fas fa-lightbulb"></i> Try These Examples</h3>
+                <div class="examples-grid">
+                    <div class="example-card" data-query="What is photosynthesis?">
+                        <div class="example-type">Simple QA</div>
+                        <div class="example-text">What is photosynthesis?</div>
+                        <div class="example-model">→ Llama 3 8B</div>
+                    </div>
+                    
+                    <div class="example-card" data-query="Analyze the causes and effects of the American Civil War">
+                        <div class="example-type">Complex Reasoning</div>
+                        <div class="example-text">Analyze the causes and effects of the American Civil War</div>
+                        <div class="example-model">→ Nemotron 70B</div>
+                    </div>
+                    
+                    <div class="example-card" data-query="Write a Python function to implement binary search">
+                        <div class="example-type">Code Generation</div>
+                        <div class="example-text">Write a Python function to implement binary search</div>
+                        <div class="example-model">→ DeepSeek Coder</div>
+                    </div>
+                    
+                    <div class="example-card" data-query="Help me brainstorm ideas for a creative writing essay about time travel">
+                        <div class="example-type">Creative Writing</div>
+                        <div class="example-text">Help me brainstorm ideas for a creative writing essay about time travel</div>
+                        <div class="example-model">→ Mixtral</div>
+                    </div>
+                    
+                    <div class="example-card" data-query="Solve this calculus problem: find the derivative of x^3 + 2x^2 - 5x + 1">
+                        <div class="example-type">Mathematics</div>
+                        <div class="example-text">Solve this calculus problem: find the derivative of x³ + 2x² - 5x + 1</div>
+                        <div class="example-model">→ Llama 3 70B</div>
+                    </div>
+                    
+                    <div class="example-card" data-query="Compare and contrast renewable vs non-renewable energy sources">
+                        <div class="example-type">Analysis</div>
+                        <div class="example-text">Compare and contrast renewable vs non-renewable energy sources</div>
+                        <div class="example-model">→ Nemotron 70B</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer-content">
+                <p>
+                    <i class="fas fa-info-circle"></i>
+                    Powered by NVIDIA LLM Router for intelligent model selection and cost optimization
+                </p>
+                <div class="footer-links">
+                    <a href="#" onclick="showAbout()">About</a>
+                    <a href="#" onclick="showHelp()">Help</a>
+                    <a href="https://github.com/NVIDIA-AI-Blueprints/llm-router" target="_blank">GitHub</a>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- About Modal -->
+    <div class="modal" id="about-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>About Smart Study Buddy</h3>
+                <button class="modal-close" onclick="closeModal('about-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Smart Study Buddy is an AI-powered educational assistant that uses NVIDIA's LLM Router to intelligently route your questions to the most appropriate language model.</p>
+                
+                <h4>How it works:</h4>
+                <ul>
+                    <li><strong>Simple Questions</strong> → Fast, efficient models (Llama 3 8B)</li>
+                    <li><strong>Complex Reasoning</strong> → Powerful models (Nemotron 70B)</li>
+                    <li><strong>Code Problems</strong> → Specialized coding models (DeepSeek Coder)</li>
+                    <li><strong>Creative Tasks</strong> → Creative models (Mixtral)</li>
+                    <li><strong>Math Problems</strong> → Math-optimized models</li>
+                </ul>
+                
+                <p>This approach provides 2-5x cost reduction while maintaining high-quality responses!</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html> 

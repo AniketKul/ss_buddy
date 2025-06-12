@@ -28,7 +28,7 @@ app.secret_key = os.environ.get('SECRET_KEY', 'study-buddy-secret-key-change-in-
 
 # Configuration
 NVIDIA_API_KEY = os.environ.get('NVIDIA_API_KEY', '')
-NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1"
+NVIDIA_BASE_URL = "https://integrate.api.nvidia.com"
 
 @dataclass
 class StudyQuery:
@@ -213,31 +213,31 @@ class LLMRouter:
     
     MODEL_CONFIGS = {
         'simple_qa': {
-            'model': 'meta/llama-3.1-8b-instruct',
+            'model': 'meta/llama-3.2-3b-instruct',
             'cost_per_token': 0.0002,
             'max_tokens': 512,
             'temperature': 0.3
         },
         'complex_reasoning': {
-            'model': 'meta/llama-3.1-70b-instruct',
+            'model': 'meta/llama-3.3-70b-instruct',
             'cost_per_token': 0.0006,
             'max_tokens': 1024,
             'temperature': 0.7
         },
         'code_generation': {
-            'model': 'meta/codellama-70b',
+            'model': 'meta/llama-3.1-70b-instruct',
             'cost_per_token': 0.0006,
             'max_tokens': 2048,
             'temperature': 0.1
         },
         'creative_writing': {
-            'model': 'mistralai/mixtral-8x7b-instruct-v0.1',
+            'model': 'mistralai/mixtral-8x7b-instruct',
             'cost_per_token': 0.0005,
             'max_tokens': 1536,
             'temperature': 0.8
         },
         'mathematics': {
-            'model': 'nvidia/nemotron-4-340b-instruct',
+            'model': 'nvidia/llama-3.1-nemotron-70b-instruct',
             'cost_per_token': 0.008,
             'max_tokens': 1024,
             'temperature': 0.2
@@ -328,7 +328,8 @@ Please provide a clear, educational response that:
             # Make the API call using HTTP requests
             headers = {
                 "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "Accept": "application/json"
             }
             data = {
                 "model": model_name,
@@ -341,18 +342,37 @@ Please provide a clear, educational response that:
                 "temperature": temperature,
                 "max_tokens": max_tokens,
                 "top_p": 1,
-                "frequency_penalty": 0,
-                "presence_penalty": 0
+                "stream": False
             }
             
-            response = requests.post(f"{self.base_url}/v1/chat/completions", headers=headers, json=data)
-            response.raise_for_status()
+            api_url = f"{self.base_url}/v1/chat/completions"
+            logger.info(f"Making NVIDIA API request to {api_url} with model: {model_name}")
+            
+            response = requests.post(api_url, headers=headers, json=data, timeout=30)
+            
+            logger.info(f"API Response Status: {response.status_code}")
+            
+            if response.status_code != 200:
+                logger.error(f"API Error Response: {response.text}")
+                response.raise_for_status()
             
             # Extract the response
             response_json = response.json()
-            response_text = response_json['choices'][0]['message']['content']
-            return response_text.strip() if response_text else "I apologize, but I couldn't generate a response."
+            
+            if 'choices' in response_json and len(response_json['choices']) > 0:
+                response_text = response_json['choices'][0]['message']['content']
+                logger.info(f"Successfully received AI response: {len(response_text)} characters")
+                return response_text.strip() if response_text else "I apologize, but I couldn't generate a response."
+            else:
+                logger.error(f"Unexpected API response format: {response_json}")
+                return self._generate_fallback_response_by_type(task_type)
                 
+        except requests.exceptions.Timeout:
+            logger.error("NVIDIA API request timed out")
+            return self._generate_fallback_response_by_type(task_type)
+        except requests.exceptions.RequestException as e:
+            logger.error(f"NVIDIA API request error: {e}")
+            return self._generate_fallback_response_by_type(task_type)
         except Exception as e:
             logger.error(f"NVIDIA API error: {e}")
             return self._generate_fallback_response_by_type(task_type)

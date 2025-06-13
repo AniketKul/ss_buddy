@@ -253,7 +253,7 @@ This project is licensed under the Apache 2.0 License. The NVIDIA LLM Router com
 
 ## 🙏 Acknowledgments
 
-- **NVIDIA AI Blueprints Team** for the official LLM Router implementation
+- **NVIDIA AI LLM Router Team** (https://github.com/NVIDIA-AI-Blueprints/llm-router) for the official LLM Router implementation
 - **NVIDIA NIM** for providing the model APIs
 - **Open Source Community** for the foundational libraries
 

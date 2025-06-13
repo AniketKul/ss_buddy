@@ -82,15 +82,18 @@ class StudyBuddyApp {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    query: query
+                    query: query,
+                    routing_strategy: 'triton'
                 })
             });
 
-            if (response.success) {
-                this.displayResponse(response.data);
-                this.updateStats();
+            // Check if response has an error field
+            if (response.error) {
+                this.showError(response.error);
             } else {
-                this.showError(response.error || 'An error occurred');
+                // Response is successful, display it directly
+                this.displayResponse(response);
+                this.updateStats();
             }
         } catch (error) {
             console.error('Query error:', error);
@@ -136,12 +139,16 @@ class StudyBuddyApp {
         // Update response content
         responseContent.textContent = data.response;
 
-        // Update metadata
+        // Calculate cost from usage if available
+        const cost = data.usage && data.usage.total_tokens ? 
+            (data.usage.total_tokens * 0.0001) : 0; // Rough estimate
+
+        // Update metadata with available fields
         responseMeta.innerHTML = `
-            <span><i class="fas fa-robot"></i> ${this.formatModelName(data.model_used)}</span>
-            <span><i class="fas fa-dollar-sign"></i> $${data.cost.toFixed(4)}</span>
-            <span><i class="fas fa-clock"></i> ${(data.response_time * 1000).toFixed(0)}ms</span>
-            <span><i class="fas fa-chart-line"></i> ${(data.confidence * 100).toFixed(0)}% confidence</span>
+            <span><i class="fas fa-robot"></i> ${this.formatModelName(data.model_used || 'Unknown')}</span>
+            <span><i class="fas fa-dollar-sign"></i> $${cost.toFixed(4)}</span>
+            <span><i class="fas fa-clock"></i> ${((data.response_time || 0) * 1000).toFixed(0)}ms</span>
+            <span><i class="fas fa-route"></i> ${data.classifier_used || 'Unknown'}</span>
         `;
 
         // Update detection information
@@ -149,12 +156,12 @@ class StudyBuddyApp {
             <div class="detection-item">
                 <i class="fas fa-book"></i>
                 <span>Subject:</span>
-                <span class="detection-value">${data.detected_subject}</span>
+                <span class="detection-value">${data.detected_subject || 'General'}</span>
             </div>
             <div class="detection-item">
                 <i class="fas fa-layer-group"></i>
                 <span>Level:</span>
-                <span class="detection-value">${data.detected_difficulty}</span>
+                <span class="detection-value">${data.detected_difficulty || 'Unknown'}</span>
             </div>
         `;
 
@@ -210,9 +217,27 @@ class StudyBuddyApp {
         try {
             const stats = await this.makeAPICall('/api/stats');
             
-            document.getElementById('query-count').textContent = stats.queries;
-            document.getElementById('session-cost').textContent = `$${stats.total_cost.toFixed(4)}`;
-            document.getElementById('session-time').textContent = `${stats.session_time}m`;
+            document.getElementById('query-count').textContent = stats.total_queries || 0;
+            
+            // Use actual cost from backend instead of rough estimate
+            const actualCost = stats.total_cost || 0;
+            document.getElementById('session-cost').textContent = `$${actualCost.toFixed(4)}`;
+            
+            // Better time formatting - show seconds for short sessions, minutes for longer ones
+            const totalSeconds = stats.total_response_time || 0;
+            let timeDisplay;
+            if (totalSeconds < 60) {
+                timeDisplay = `${Math.round(totalSeconds)}s`;
+            } else if (totalSeconds < 3600) {
+                const minutes = Math.floor(totalSeconds / 60);
+                const seconds = Math.round(totalSeconds % 60);
+                timeDisplay = seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
+            } else {
+                const hours = Math.floor(totalSeconds / 3600);
+                const minutes = Math.floor((totalSeconds % 3600) / 60);
+                timeDisplay = minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+            }
+            document.getElementById('session-time').textContent = timeDisplay;
         } catch (error) {
             console.error('Failed to update stats:', error);
         }

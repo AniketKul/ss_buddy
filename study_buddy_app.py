@@ -26,42 +26,84 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Import the official NVIDIA LLM Router implementation
-from nvidia_router_core import NVIDIARouterService, RouterConfig
+from nvidia_router_core import NVIDIARouterService
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Flask app configuration
 app = Flask(__name__)
+app.secret_key = os.getenv('SECRET_KEY', 'study-buddy-dev-secret-key')
 CORS(app)
 
-# Initialize NVIDIA LLM Router Service
+# Initialize NVIDIA LLM Router
 try:
-    # Try to load from config file first
-    if os.path.exists('nvidia_router_config.yaml'):
-        nvidia_router = NVIDIARouterService('nvidia_router_config.yaml')
-        logger.info("Loaded NVIDIA LLM Router with configuration file")
+    nvidia_router = NVIDIARouterService()
+    if nvidia_router.config and len(nvidia_router.config.policies) > 0:
+        logger.info(f"Loaded NVIDIA LLM Router with {len(nvidia_router.config.policies)} policies")
+        for policy in nvidia_router.config.policies:
+            logger.info(f"  - Policy '{policy.name}' with {len(policy.llms)} models")
     else:
-        # Use default embedded configuration
-        nvidia_router = NVIDIARouterService()
         logger.info("Loaded NVIDIA LLM Router with default configuration")
 except Exception as e:
     logger.error(f"Failed to initialize NVIDIA LLM Router: {e}")
     nvidia_router = None
 
-# Statistics tracking
-stats = {
-    'total_queries': 0,
-    'queries_by_subject': {},
-    'queries_by_difficulty': {},
-    'queries_by_policy': {},
-    'queries_by_model': {},
-    'average_response_time': 0,
-    'total_response_time': 0
-}
+# Statistics tracking with persistent storage
+STATS_FILE = 'stats.json'
+
+def load_stats():
+    """Load stats from file or create default stats"""
+    try:
+        if os.path.exists(STATS_FILE):
+            with open(STATS_FILE, 'r') as f:
+                return json.load(f)
+    except Exception as e:
+        logger.warning(f"Failed to load stats: {e}")
+    
+    # Return default stats
+    return {
+        'total_queries': 0,
+        'queries_by_subject': {},
+        'queries_by_difficulty': {},
+        'queries_by_policy': {},
+        'queries_by_model': {},
+        'average_response_time': 0,
+        'total_response_time': 0,
+        'total_cost': 0,
+        'total_tokens': 0,
+        'session_start': datetime.now().isoformat()
+    }
+
+def save_stats(stats_data):
+    """Save stats to file"""
+    try:
+        with open(STATS_FILE, 'w') as f:
+            json.dump(stats_data, f, indent=2)
+    except Exception as e:
+        logger.error(f"Failed to save stats: {e}")
+
+def calculate_cost(usage):
+    """Calculate cost based on token usage"""
+    if not usage:
+        return 0
+    
+    # NVIDIA API pricing (approximate)
+    # These are rough estimates - actual pricing may vary
+    prompt_cost_per_1k = 0.0002  # $0.0002 per 1K prompt tokens
+    completion_cost_per_1k = 0.0006  # $0.0006 per 1K completion tokens
+    
+    prompt_tokens = usage.get('prompt_tokens', 0)
+    completion_tokens = usage.get('completion_tokens', 0)
+    
+    prompt_cost = (prompt_tokens / 1000) * prompt_cost_per_1k
+    completion_cost = (completion_tokens / 1000) * completion_cost_per_1k
+    
+    return prompt_cost + completion_cost
+
+# Load stats on startup
+stats = load_stats()
 
 @app.route('/')
 def index():
@@ -129,6 +171,14 @@ def handle_query():
             stats['total_response_time'] += response_time
             stats['average_response_time'] = stats['total_response_time'] / stats['total_queries']
         
+        if 'usage' in result:
+            usage = result['usage']
+            stats['total_cost'] += calculate_cost(usage)
+            stats['total_tokens'] += usage.get('prompt_tokens', 0) + usage.get('completion_tokens', 0)
+        
+        # Save stats to file
+        save_stats(stats)
+        
         # Add timestamp
         result['timestamp'] = datetime.now().isoformat()
         
@@ -147,6 +197,25 @@ def handle_query():
 def get_stats():
     """Get application statistics"""
     return jsonify(stats)
+
+@app.route('/api/stats/reset', methods=['POST'])
+def reset_stats():
+    """Reset application statistics (for testing)"""
+    global stats
+    stats = {
+        'total_queries': 0,
+        'queries_by_subject': {},
+        'queries_by_difficulty': {},
+        'queries_by_policy': {},
+        'queries_by_model': {},
+        'average_response_time': 0,
+        'total_response_time': 0,
+        'total_cost': 0,
+        'total_tokens': 0,
+        'session_start': datetime.now().isoformat()
+    }
+    save_stats(stats)
+    return jsonify({'message': 'Stats reset successfully', 'stats': stats})
 
 @app.route('/api/config')
 def get_config():

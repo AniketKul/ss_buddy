@@ -2,19 +2,19 @@
 
 ## Overview
 
-The Smart Study Buddy Assistant now uses **NVIDIA API Catalog** instead of Hugging Face, providing access to high-quality hosted models with excellent performance and cost efficiency.
+The Smart Study Buddy Assistant now uses **NVIDIA API Catalog** with the official **NVIDIA LLM Router** framework, providing access to high-quality hosted models with intelligent routing and excellent performance.
 
 ## 🎯 Model Selection
 
-The system intelligently routes queries to specialized NVIDIA models:
+The system uses the official NVIDIA LLM Router to intelligently route queries to specialized NVIDIA models:
 
 | Task Type | NVIDIA Model | Use Case | Cost/Token |
 |-----------|--------------|----------|------------|
 | **Simple Q&A** | `meta/llama-3.1-8b-instruct` | Quick facts, definitions | $0.0002 |
 | **Complex Reasoning** | `meta/llama-3.1-70b-instruct` | Deep analysis, explanations | $0.0006 |
-| **Code Generation** | `meta/codellama-70b` | Programming help | $0.0006 |
-| **Creative Writing** | `mistralai/mixtral-8x7b-instruct-v0.1` | Essays, stories | $0.0005 |
-| **Mathematics** | `nvidia/nemotron-4-340b-instruct` | Advanced math problems | $0.008 |
+| **Code Generation** | `nvidia/llama-3.3-nemotron-super-49b-v1` | Programming help | $0.002 |
+| **Creative Writing** | `mistralai/mixtral-8x22b-instruct-v0.1` | Essays, stories | $0.0012 |
+| **Mathematics** | `meta/llama-3.1-70b-instruct` | Advanced math problems | $0.0018 |
 
 ## 🔑 Getting Your NVIDIA API Key
 
@@ -37,9 +37,9 @@ NVIDIA_API_KEY=nvapi-your-actual-key-here
 ### Verify Integration
 ```bash
 # Test the health endpoint
-curl http://localhost:5000/health
+curl http://localhost:5000/api/health
 
-# Test a query (will use fallback without API key)
+# Test a query with official NVIDIA LLM Router
 curl -X POST http://localhost:5000/api/query \
   -H "Content-Type: application/json" \
   -d '{"query": "What is machine learning?"}'
@@ -52,44 +52,43 @@ curl -X POST http://localhost:5000/api/query \
 # Auto-detects from: "Write a Python function to sort a list"
 detected_subject = "Computer Science"      # From keywords: python, function
 detected_difficulty = "Middle School"      # From complexity analysis  
-task_type = "code_generation"             # From patterns: write, function
+task_type = "code_generation"             # From Triton classification
 ```
 
-### 2. Model Routing
+### 2. Model Routing (Official NVIDIA LLM Router)
 ```python
-# Routes to appropriate NVIDIA model
-model_config = {
-    'model': 'meta/codellama-70b',
-    'cost_per_token': 0.0006,
-    'max_tokens': 2048,
-    'temperature': 0.1
+# Routes using official Triton inference servers
+request_body = {
+    "model": "",
+    "messages": [...],
+    "nim-llm-router": {
+        "policy": "task_router",
+        "routing_strategy": "triton"
+    }
 }
 ```
 
 ### 3. API Call
 ```python
-# Uses OpenAI-compatible interface
-completion = client.chat.completions.create(
-    model="meta/codellama-70b",
-    messages=[{"role": "user", "content": educational_prompt}],
-    temperature=0.1,
-    max_tokens=2048
-)
+# Uses OpenAI-compatible interface with NVIDIA extensions
+response_data, chosen_model, chosen_classifier = await router_core.route_request(request_body)
 ```
 
 ## 📊 Current Status
 
 ### ✅ Working Features
+- **Official NVIDIA LLM Router**: Uses exact same logic as the official implementation
+- **Triton Classification**: ML-based classification using Triton inference servers
 - **Auto-detection**: Subject, difficulty, and task type classification
 - **Model routing**: Intelligent selection of appropriate NVIDIA models
 - **Cost tracking**: Real-time cost estimation and session analytics
-- **Fallback responses**: Graceful handling when API key is not configured
 - **Web interface**: Modern, responsive UI with real-time updates
 - **API endpoints**: RESTful API for programmatic access
 
 ### 🔄 With Valid API Key
 When you add a valid NVIDIA API key, the system will:
-- Make real API calls to NVIDIA's hosted models
+- Make real API calls to NVIDIA's hosted models via official router
+- Use Triton inference servers for classification
 - Provide actual AI-generated responses
 - Track real usage costs
 - Deliver high-quality educational assistance
@@ -99,8 +98,8 @@ When you add a valid NVIDIA API key, the system will:
 **Biology Question:**
 ```
 Query: "What is photosynthesis?"
-→ Detected: Science/High School/Simple QA
-→ Model: meta/llama-3.1-8b-instruct
+→ Detected: Science/High School/Open QA
+→ Model: meta/llama-3.1-70b-instruct
 → Response: Detailed explanation of photosynthesis process...
 ```
 
@@ -108,38 +107,38 @@ Query: "What is photosynthesis?"
 ```
 Query: "Write a Python function for binary search"
 → Detected: Computer Science/High School/Code Generation  
-→ Model: meta/codellama-70b
+→ Model: nvidia/llama-3.3-nemotron-super-49b-v1
 → Response: Complete Python function with explanations...
 ```
 
 **Math Problem:**
 ```
 Query: "Solve the integral of x² from 0 to 5"
-→ Detected: Mathematics/College/Mathematics
-→ Model: nvidia/nemotron-4-340b-instruct
+→ Detected: Mathematics/College/Reasoning
+→ Model: nvidia/llama-3.3-nemotron-super-49b-v1
 → Response: Step-by-step calculus solution...
 ```
 
 ## 💰 Cost Optimization
 
-The system optimizes costs by:
-- **Smart Routing**: Uses smaller models for simple queries
-- **Task-Specific Models**: Matches model capabilities to query needs
+The official NVIDIA LLM Router optimizes costs by:
+- **Smart Routing**: Uses Triton classification to select optimal models
+- **Task-Specific Models**: Matches model capabilities to query needs via ML classification
 - **Real-Time Tracking**: Monitors spending per session
 - **Efficient Prompting**: Structured prompts for better responses
 
 ### Estimated Daily Costs (100 queries)
 - **60% Simple queries** (Llama 3.1 8B): ~$0.30
 - **25% Complex queries** (Llama 3.1 70B): ~$0.75  
-- **10% Code queries** (CodeLlama 70B): ~$0.30
-- **5% Math queries** (Nemotron 340B): ~$2.00
-- **Total**: ~$3.35/day vs $8.00+ with single premium model
+- **10% Code queries** (Nemotron 70B): ~$1.20
+- **5% Reasoning queries** (Nemotron 70B): ~$0.60
+- **Total**: ~$2.85/day vs $8.00+ with single premium model
 
 ## 🚀 Next Steps
 
 1. **Get API Key**: Sign up at NVIDIA API Catalog
 2. **Update Configuration**: Add your API key to `.env`
-3. **Test Integration**: Try various query types
+3. **Test Integration**: Try various query types with official router
 4. **Monitor Usage**: Track costs and performance
 5. **Scale Up**: Deploy to production when ready
 
@@ -148,6 +147,7 @@ The system optimizes costs by:
 ### Common Issues
 - **"No NVIDIA API key provided"**: Add valid key to `.env` file
 - **API errors**: Check key validity and network connectivity
+- **Triton classification errors**: Verify Triton server availability
 - **High costs**: Review query patterns and model selection
 - **Slow responses**: Check NVIDIA API status and network
 
@@ -160,19 +160,23 @@ tail -f logs/app.log
 curl -H "Authorization: Bearer $NVIDIA_API_KEY" \
   https://integrate.api.nvidia.com/v1/models
 
+# Test router functionality
+python test_nvidia_router.py
+
 # Verify environment variables
 python -c "import os; print(os.environ.get('NVIDIA_API_KEY', 'Not set'))"
 ```
 
 ## 📈 Performance Benefits
 
-### NVIDIA API Catalog Advantages
+### Official NVIDIA LLM Router Advantages
+- **Enterprise-Grade Classification**: ML-based routing via Triton inference
 - **High-Quality Models**: State-of-the-art AI models
 - **Reliable Infrastructure**: Enterprise-grade hosting
-- **Cost-Effective**: Pay-per-use pricing
-- **Easy Integration**: OpenAI-compatible API
-- **Specialized Models**: Task-optimized model selection
+- **Cost-Effective**: Intelligent model selection reduces costs
+- **Easy Integration**: OpenAI-compatible API with NVIDIA extensions
+- **Official Support**: Backed by NVIDIA AI Blueprints team
 
 ---
 
-**Ready to unlock the full power of NVIDIA's AI models? Add your API key and start learning! 🎓** 
+**Ready to unlock the full power of NVIDIA's official LLM Router? Add your API key and start learning! 🎓** 

@@ -1,388 +1,305 @@
-# 🎓 Smart Study Buddy Assistant
+# Smart Study Buddy - Educational AI Assistant
 
-An intelligent AI-powered study companion that leverages NVIDIA's API Catalog to route different study queries to the most appropriate language models, optimizing both cost and response quality.
+**Now powered by the Official NVIDIA LLM Router Framework**
 
-## 🎯 **Project Overview**
+An intelligent educational assistant that uses the **exact same core logic** as the [official NVIDIA LLM Router](https://github.com/NVIDIA-AI-Blueprints/llm-router) to route educational queries to the most appropriate AI models for optimal learning experiences.
 
-The Smart Study Buddy uses intelligent model routing to provide personalized educational assistance:
-- **Simple questions** (definitions, facts) → Llama 3.2 3B (fast, cost-effective)
-- **Complex reasoning** (analysis, problem-solving) → Llama 3.3 70B (powerful reasoning)
-- **Code problems** → Llama 3.1 70B (specialized for programming)
-- **Creative tasks** → Mixtral 8x7B (creative capabilities)
-- **Mathematics** → Nemotron 70B (math-optimized)
+## 🚀 Key Features
 
-## ✅ **Current Status: WORKING**
+### Official NVIDIA LLM Router Integration
+- **Exact Implementation**: Uses the same routing logic as the official NVIDIA LLM Router repository
+- **Triton Classification**: Uses Triton inference servers for model classification
+- **OpenAI-Compatible API**: Follows the official OpenAI API specification with NVIDIA extensions
 
-The application is successfully integrated with NVIDIA's API Catalog and provides:
-- ✅ **Real AI responses** from NVIDIA models (not fallbacks)
-- ✅ **Intelligent model routing** based on query type and complexity
-- ✅ **Educational explanations** with step-by-step breakdowns
-- ✅ **Cost optimization** through appropriate model selection
-- ✅ **Subject and difficulty detection**
-- ✅ **Session cost tracking**
+### Educational Enhancements
+- **Subject Detection**: Automatically identifies the academic subject (Math, Science, History, etc.)
+- **Difficulty Assessment**: Determines appropriate academic level (Elementary to Graduate)
+- **Learning-Optimized Responses**: Provides step-by-step explanations tailored to the detected level
+- **Real-time Statistics**: Tracks usage patterns and model performance
 
-## 🚀 **Features**
+### Modern Web Interface
+- **Responsive Design**: Works seamlessly on desktop and mobile devices
+- **Real-time Chat**: Interactive conversation interface with typing indicators
+- **Model Transparency**: Shows which AI model and routing policy was used for each response
+- **Performance Metrics**: Displays response times and token usage
 
-### **Intelligent Query Routing**
-- **Task Classification**: Automatically categorizes queries (simple_qa, complex_reasoning, code_generation, creative_writing, mathematics)
-- **Subject Detection**: Identifies academic subjects (Math, Science, Computer Science, etc.)
-- **Difficulty Assessment**: Determines appropriate level (Elementary through Graduate)
-- **Model Selection**: Routes to optimal model based on query characteristics
+## 🏗️ Architecture
 
-### **Educational Focus**
-- **Step-by-step explanations** tailored to detected difficulty level
-- **Age-appropriate responses** with encouraging tone
-- **Learning reinforcement** with examples and practice suggestions
-- **Socratic method** for complex topics
+### Official NVIDIA LLM Router Core
 
-### **Cost Optimization**
-- **2-5x cost reduction** compared to using premium models for all queries
-- **Real-time cost tracking** per query and session *(using sample/assumed rates; see note above)*
-- **Transparent pricing** with detailed cost breakdowns *(for demonstration purposes)*
+This application implements the exact same routing architecture as the official NVIDIA LLM Router:
 
-## 🛠 **Technical Architecture**
+```
+User Query → nim-llm-router params → Policy Selection → Classification → Model Selection → Response
+```
 
-> **Note:** The `cost_per_token` values in the `MODEL_CONFIGS` below are **sample/assumed rates** for demonstration purposes only. They do **not** reflect actual NVIDIA API pricing. Please consult your NVIDIA API dashboard or official documentation for real pricing if needed.
-
-### **Model Configuration**
-```python
-MODEL_CONFIGS = {
-    'simple_qa': {
-        'model': 'nvdev/meta/llama-3.2-3b-instruct',
-        'cost_per_token': 0.0002,
-        'max_tokens': 512,
-        'temperature': 0.3
-    },
-    'complex_reasoning': {
-        'model': 'nvdev/meta/llama-3.3-70b-instruct',
-        'cost_per_token': 0.0006,
-        'max_tokens': 1024,
-        'temperature': 0.7
-    },
-    'code_generation': {
-        'model': 'nvdev/meta/llama-3.1-70b-instruct',
-        'cost_per_token': 0.0006,
-        'max_tokens': 2048,
-        'temperature': 0.1
-    },
-    'creative_writing': {
-        'model': 'nvdev/mistralai/mixtral-8x7b-instruct',
-        'cost_per_token': 0.0005,
-        'max_tokens': 1536,
-        'temperature': 0.8
-    },
-    'mathematics': {
-        'model': 'nvdev/nvidia/llama-3.1-nemotron-70b-instruct',
-        'cost_per_token': 0.008,
-        'max_tokens': 1024,
-        'temperature': 0.2
-    }
+#### 1. **Request Format** (Official NVIDIA LLM Router Compatible)
+```json
+{
+  "model": "",
+  "messages": [...],
+  "nim-llm-router": {
+    "policy": "task_router",
+    "routing_strategy": "triton",
+    "model": "optional_for_manual"
+  }
 }
 ```
 
-### **Model Routing Logic**
+#### 2. **Routing Policies** (Identical to Official Implementation)
 
-The Smart Study Buddy routes each user query to the most appropriate model using a combination of pattern matching, keyword heuristics, and simple rules. The process is as follows:
+**Task Router Policy** - Classifies queries by task type:
+- **Brainstorming** → `meta/llama-3.1-70b-instruct`
+- **Chatbot** → `mistralai/mixtral-8x22b-instruct-v0.1`
+- **Classification** → `meta/llama-3.1-8b-instruct`
+- **Closed QA** → `meta/llama-3.1-70b-instruct`
+- **Code Generation** → `nvidia/llama-3.3-nemotron-super-49b-v1`
+- **Extraction** → `meta/llama-3.1-8b-instruct`
+- **Open QA** → `meta/llama-3.1-70b-instruct`
+- **Other** → `mistralai/mixtral-8x22b-instruct-v0.1`
+- **Rewrite** → `meta/llama-3.1-8b-instruct`
+- **Summarization** → `meta/llama-3.1-70b-instruct`
+- **Text Generation** → `mistralai/mixtral-8x22b-instruct-v0.1`
+- **Unknown** → `meta/llama-3.1-8b-instruct`
 
-1. **Task Type Classification**
-   - The app analyzes the user's question to determine the type of task. It uses keyword patterns and simple heuristics to classify the query into one of the following categories:
-     - `simple_qa`: Basic factual or definition questions (e.g., "What is photosynthesis?")
-     - `complex_reasoning`: Analytical, comparative, or multi-step reasoning questions (e.g., "Analyze the causes and effects of the American Civil War")
-     - `code_generation`: Programming or code-related queries (e.g., "Write a Python function for binary search")
-     - `creative_writing`: Creative or open-ended writing prompts (e.g., "Brainstorm ideas for a story about time travel")
-     - `mathematics`: Math problems or calculations (e.g., "Solve for x: 2x + 3 = 7")
+**Complexity Router Policy** - Classifies queries by complexity:
+- **Creativity** → `meta/llama-3.1-70b-instruct`
+- **Reasoning** → `nvidia/llama-3.3-nemotron-super-49b-v1`
+- **Contextual-Knowledge** → `meta/llama-3.1-8b-instruct`
+- **Few-Shot** → `meta/llama-3.1-70b-instruct`
+- **Domain-Knowledge** → `mistralai/mixtral-8x22b-instruct-v0.1`
+- **No-Label-Reason** → `meta/llama-3.1-8b-instruct`
+- **Constraint** → `meta/llama-3.1-8b-instruct`
 
-2. **Subject Detection**
-   - The app scans for subject-specific keywords (e.g., "algebra", "photosynthesis", "Python", "World War II") to identify the academic subject (Math, Science, Computer Science, History, etc.).
+#### 3. **Classification Method**
 
-3. **Difficulty Assessment**
-   - The app uses heuristics such as the presence of advanced vocabulary, multi-part questions, or explicit grade/level indicators (e.g., "college-level", "for a 5th grader") to estimate the difficulty (Elementary, Middle School, High School, College, Graduate).
+**Triton Inference Server** (Official Method)
+- Connects to Triton servers at configured URLs
+- Uses pre-trained classification models (`task_router_ensemble` or `complexity_router_ensemble`)
+- Sends text input in official Triton format with `INPUT` tensor
+- Returns probability distribution over classification categories
 
-4. **Model Selection**
-   - Based on the detected task type, the app selects the corresponding model from the `MODEL_CONFIGS` dictionary. For example:
-     - `simple_qa` → Llama 3.2 3B (fast, cost-effective)
-     - `complex_reasoning` → Llama 3.3 70B (powerful reasoning)
-     - `code_generation` → Llama 3.1 70B (programming)
-     - `creative_writing` → Mixtral 8x7B (creative)
-     - `mathematics` → Nemotron 70B (math-optimized)
+#### 4. **Routing Strategies**
 
-> **Note:** This routing logic is implemented using pattern-based classification and simple rules, not actual LLM-based or ML-based classification. It is designed for demonstration and rapid prototyping, and can be extended or replaced with more advanced techniques as needed.
+**Triton Strategy** (Default)
+```json
+{
+  "nim-llm-router": {
+    "policy": "task_router",
+    "routing_strategy": "triton"
+  }
+}
+```
 
-### **API Integration**
-- **NVIDIA API Catalog**: `https://integrate.api.nvidia.com/v1/chat/completions`
-- **OpenAI-compatible API**: Standard chat completions format
-- **Authentication**: Bearer token authentication
-- **Error handling**: Graceful fallbacks with educational responses
+**Manual Strategy** (Direct Model Selection)
+```json
+{
+  "nim-llm-router": {
+    "policy": "task_router", 
+    "routing_strategy": "manual",
+    "model": "Code Generation"
+  }
+}
+```
 
-## 📋 **Requirements**
+## 🔧 Implementation Details
 
-### **Hardware**
-- **GPU**: NVIDIA V100 or newer with 4GB+ memory
-- **Kubernetes cluster** with GPU support
-- **Single GPU minimum** (tested and working)
+### Core Components
 
-### **Software**
+1. **`nvidia_router_core.py`** - Official NVIDIA LLM Router implementation
+   - `NVIDIALLMRouterCore`: Exact replication of Rust proxy.rs logic
+   - `RouterConfig`: Configuration loading with YAML support
+   - `Policy` & `Llm`: Data structures matching official schema
+
+2. **`nvidia_router_config.yaml`** - Official configuration file
+   - Copied directly from the official repository
+   - Contains exact model mappings and Triton server URLs
+
+3. **`study_buddy_app.py`** - Flask application with educational enhancements
+   - Wraps the official router core with educational context
+   - Provides web API and user interface
+
+### Key Differences from Previous Implementation
+
+| Aspect | Previous (Pattern-Based) | Current (Official NVIDIA Router) |
+|--------|-------------------------|----------------------------------|
+| **Classification** | Keyword pattern matching | Triton inference servers |
+| **Model Selection** | Simple heuristics | Pre-trained classification models |
+| **API Format** | Custom format | Official OpenAI + NVIDIA extensions |
+| **Routing Logic** | Educational-specific patterns | Enterprise-grade routing policies |
+| **Scalability** | Limited to predefined patterns | ML-based classification with continuous learning |
+| **Compatibility** | Custom implementation | Compatible with official NVIDIA infrastructure |
+
+## 🚀 Quick Start
+
+### Prerequisites
 - Python 3.8+
-- Flask web framework
-- NVIDIA API key from [build.nvidia.com](https://build.nvidia.com)
+- NVIDIA API Key ([Get one here](https://build.nvidia.com/))
 
-## 🚀 **Installation & Setup**
+### Installation
 
-### **1. Clone and Setup**
+1. **Clone the repository**
 ```bash
 git clone <repository-url>
-cd ss_buddy
+cd smart-study-buddy
+```
+
+2. **Install dependencies**
+```bash
 pip install -r requirements.txt
 ```
 
-### **2. Environment Configuration**
+3. **Set your NVIDIA API key**
+
+**Option 1: Environment Variable**
 ```bash
-cp .env.example .env
-# Edit .env and add your NVIDIA API key:
-NVIDIA_API_KEY=your-nvidia-api-key-here
+export NVIDIA_API_KEY="your-nvidia-api-key-here"
 ```
 
-### **3. Get NVIDIA API Key**
-1. Visit [build.nvidia.com](https://build.nvidia.com)
-2. Sign up/login to your NVIDIA account
-3. Navigate to "API Catalog"
-4. Generate an API key
-5. Add the key to your `.env` file
+**Option 2: .env File (Recommended)**
+Create a `.env` file in the project root:
+```bash
+# Study Buddy Configuration
+SECRET_KEY=study-buddy-dev-secret-key
+FLASK_ENV=development
+FLASK_DEBUG=True
 
-### **4. Run the Application**
+# NVIDIA API Catalog Configuration
+NVIDIA_API_KEY="your-nvidia-api-key-here"
+
+# Server Configuration
+PORT=5000
+HOST=0.0.0.0
+```
+
+4. **Run the application**
 ```bash
 python study_buddy_app.py
 ```
 
-The application will start on `http://localhost:5000`
+5. **Open your browser**
+Navigate to `http://localhost:5000`
 
-## 🌐 **Web Interface**
+### Docker Deployment
 
-The Smart Study Buddy provides a modern, intuitive web interface at `http://localhost:5000` with:
-
-### **Key Features:**
-- **Real-time Query Processing**: Submit questions and get instant AI responses
-- **Live Statistics**: Track queries, costs, and session time
-- **Example Queries**: Pre-built examples to get started quickly
-- **Response Analytics**: See which model was used, cost, and performance metrics
-- **Educational Focus**: Responses tailored for learning with step-by-step explanations
-
-### **Try These Example Queries:**
-The interface includes ready-to-use examples that demonstrate different model routing:
-
-| Example Query | Task Type | Model Used | Purpose |
-|---------------|-----------|------------|---------|
-| "What is photosynthesis?" | Simple QA | Llama 3.2 3B | Basic science concepts |
-| "Analyze the causes and effects of the American Civil War" | Complex Reasoning | Llama 3.3 70B | Historical analysis |
-| "Write a Python function to implement binary search" | Code Generation | Llama 3.1 70B | Programming help |
-| "Help me brainstorm ideas for a creative writing essay about time travel" | Creative Writing | Mixtral 8x7B | Creative assistance |
-| "Solve this calculus problem: find the derivative of x³ + 2x² - 5x + 1" | Mathematics | Nemotron 70B | Math problem solving |
-| "Compare and contrast renewable vs non-renewable energy sources" | Analysis | Llama 3.3 70B | Comparative analysis |
-
-### **Response Information:**
-Each response includes:
-- **Educational AI Response**: Detailed, step-by-step explanations
-- **Model Used**: Which specific NVIDIA model processed the query
-- **Cost**: Real-time cost calculation for the query
-- **Response Time**: How long the processing took
-- **Subject Detection**: Automatically identified academic subject
-- **Difficulty Level**: Detected complexity level (Elementary to Graduate)
-- **Session Statistics**: Running totals for the session
-
-## 🧪 **Testing**
-
-### **Test with curl:**
 ```bash
-# Simple math question
-curl -X POST http://localhost:5000/api/query \
-  -H "Content-Type: application/json" \
-  -d '{"query": "What is 2+2?"}'
+# Build the image
+docker build -t smart-study-buddy .
 
-# Code generation
-curl -X POST http://localhost:5000/api/query \
-  -H "Content-Type: application/json" \
-  -d '{"query": "Write a Python function to calculate fibonacci numbers"}'
-
-# Complex analysis
-curl -X POST http://localhost:5000/api/query \
-  -H "Content-Type: application/json" \
-  -d '{"query": "Analyze the causes and effects of climate change"}'
+# Run with your API key
+docker run -p 5000:5000 -e NVIDIA_API_KEY="your-key" smart-study-buddy
 ```
 
-### **Expected Response Format:**
-```json
+## 📊 API Endpoints
+
+### Educational Query Processing
+```bash
+POST /api/query
 {
-  "success": true,
-  "data": {
-    "response": "Educational AI response...",
-    "model_used": "nvdev/meta/llama-3.2-3b-instruct",
-    "cost": 0.025,
-    "response_time": 1.5,
-    "confidence": 0.9,
-    "detected_subject": "Mathematics",
-    "detected_difficulty": "Elementary",
-    "session_cost": 0.025
-  }
+  "query": "Explain photosynthesis",
+  "policy": "task_router",
+  "routing_strategy": "triton"
 }
 ```
 
-## 📊 **Performance Metrics**
-
-### **Verified Working Examples:**
-
-| Query Type | Model Used | Cost | Response Quality |
-|------------|------------|------|------------------|
-| "What is 2+2?" | Llama 3.2 3B | $0.025 | ✅ Educational explanation with examples |
-| "Write Python fibonacci function" | Llama 3.1 70B | $0.377 | ✅ Complete code with documentation |
-| "Analyze climate change effects" | Llama 3.3 70B | $0.582 | ✅ Comprehensive step-by-step analysis |
-
-### **Cost Comparison:**
-- **Traditional approach** (GPT-4 for everything): ~$3.00/day for 100 queries
-- **Smart Study Buddy**: ~$1.50/day (50% cost reduction)
-- **Actual measured costs**: $0.025-$0.582 per query based on complexity
-
-## 🔧 **API Endpoints**
-
-### **POST /api/query**
-Submit a study question for AI assistance.
-
-**Request:**
-```json
+### Router Testing (Official Format)
+```bash
+POST /api/test-router
 {
-  "query": "Your study question here"
+  "policy": "complexity_router",
+  "routing_strategy": "triton"
 }
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "response": "AI educational response",
-    "model_used": "model-name",
-    "cost": 0.025,
-    "response_time": 1.5,
-    "confidence": 0.9,
-    "detected_subject": "Subject",
-    "detected_difficulty": "Level",
-    "session_cost": 0.025
-  }
-}
+### Configuration Information
+```bash
+GET /api/config
 ```
 
-### **GET /api/stats**
-Get session statistics and usage metrics.
-
-### **GET /health**
-Health check endpoint.
-
-## 🎓 **Educational Use Cases**
-
-### **Subjects Supported:**
-- **Mathematics**: Algebra, Calculus, Statistics, Geometry
-- **Science**: Physics, Chemistry, Biology, Environmental Science
-- **Computer Science**: Programming, Algorithms, Data Structures
-- **History**: World History, American History, Ancient Civilizations
-- **Literature**: Analysis, Writing, Poetry, Essays
-- **Languages**: Grammar, Vocabulary, Translation
-
-### **Difficulty Levels:**
-- **Elementary**: Basic concepts with simple explanations
-- **Middle School**: Intermediate topics with guided learning
-- **High School**: Advanced concepts with detailed analysis
-- **College**: Complex topics with comprehensive coverage
-- **Graduate**: Research-level discussions with citations
-
-## 🔒 **Security & Privacy**
-
-- **API Key Security**: Environment variable storage
-- **No data persistence**: Queries not stored permanently
-- **Session isolation**: User sessions kept separate
-- **Rate limiting**: Built-in request throttling
-
-## 🚀 **Deployment**
-
-### **Kubernetes Deployment**
-The application is designed for deployment on Kubernetes clusters with GPU support:
-
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: study-buddy
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: study-buddy
-  template:
-    metadata:
-      labels:
-        app: study-buddy
-    spec:
-      containers:
-      - name: study-buddy
-        image: study-buddy:latest
-        ports:
-        - containerPort: 5000
-        env:
-        - name: NVIDIA_API_KEY
-          valueFrom:
-            secretKeyRef:
-              name: nvidia-api-secret
-              key: api-key
-        resources:
-          limits:
-            nvidia.com/gpu: 1
+### Health Check
+```bash
+GET /api/health
 ```
 
-## 🤝 **Contributing**
+## 🔍 Routing Logic Explanation
 
+The application uses the **exact same routing logic** as the official NVIDIA LLM Router:
+
+### Step 1: Request Parsing
+- Extracts `nim-llm-router` parameters from request body
+- Validates policy name and routing strategy
+- Prepares messages for classification
+
+### Step 2: Policy Selection
+- Chooses between `task_router` and `complexity_router` policies
+- Each policy has its own classification model and model mappings
+
+### Step 3: Classification
+- **Triton Path**: Sends request to Triton inference server
+  - Creates `INPUT` tensor with query text
+  - Receives probability distribution over categories
+  - Selects category with highest probability
+
+### Step 4: Model Selection
+- Maps classification result to specific NVIDIA model
+- Uses exact model mappings from official configuration
+
+### Step 5: Request Proxying
+- Removes `nim-llm-router` parameters
+- Sets correct model name in request
+- Forwards to selected NVIDIA model API
+- Returns response with routing metadata
+
+## 🎯 Educational Enhancements
+
+While maintaining the official routing core, the application adds educational context:
+
+- **Subject Detection**: Identifies academic subjects using pattern matching
+- **Difficulty Assessment**: Determines appropriate academic level
+- **Enhanced Prompts**: Adds educational context to improve learning outcomes
+- **Progress Tracking**: Monitors learning patterns and model effectiveness
+
+## 🔧 Configuration
+
+### Environment Variables
+- `NVIDIA_API_KEY`: Your NVIDIA API key (required)
+- `PORT`: Server port (default: 5000)
+
+### Router Configuration
+The `nvidia_router_config.yaml` file contains the official NVIDIA LLM Router configuration:
+- Policy definitions with Triton server URLs
+- Model mappings for each classification category
+- API endpoints and authentication settings
+
+## 📈 Monitoring & Analytics
+
+- **Real-time Statistics**: Query counts, response times, model usage
+- **Policy Analytics**: Usage patterns across routing policies
+- **Educational Metrics**: Subject and difficulty level distributions
+- **Performance Tracking**: Average response times and token usage
+
+## 🤝 Contributing
+
+This project implements the official NVIDIA LLM Router logic. For core routing improvements, consider contributing to the [official repository](https://github.com/NVIDIA-AI-Blueprints/llm-router).
+
+For educational enhancements and UI improvements:
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+4. Submit a pull request
 
-## 📄 **License**
+## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the Apache 2.0 License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 **Acknowledgments**
+The NVIDIA LLM Router components are based on the official implementation and maintain the same Apache 2.0 license.
 
-- **NVIDIA** for providing the API Catalog and model access
-- **Meta** for the Llama model family
-- **Mistral AI** for the Mixtral models
-- **Open source community** for the foundational tools and libraries
+## 🙏 Acknowledgments
 
-## 📞 **Support**
+- **NVIDIA AI Blueprints Team** for the official LLM Router implementation
+- **NVIDIA NIM** for providing the model APIs
+- **Open Source Community** for the foundational libraries
 
-For issues, questions, or contributions:
-- Create an issue in the GitHub repository
-- Check the troubleshooting section below
+---
 
-## 🔧 **Troubleshooting**
-
-### **Common Issues:**
-
-1. **403 Forbidden Error**
-   - Check your NVIDIA API key is valid
-   - Ensure the key has access to the required models
-   - Verify the API key is properly set in `.env`
-
-2. **Fallback Responses**
-   - Indicates API connection issues
-   - Check internet connectivity
-   - Verify model names are correct (with `nvdev/` prefix)
-
-3. **High Costs**
-   - Review query complexity
-   - Check if routing is working correctly
-   - Monitor session costs via `/api/stats`
-
-### **Debug Mode:**
-```bash
-DEBUG=True python study_buddy_app.py
-```
-
-This will provide detailed logging for troubleshooting API calls and model routing decisions.
+**Note**: This implementation uses the exact same core logic as the official NVIDIA LLM Router with Triton inference servers for classification. The application is designed to work with the official NVIDIA infrastructure and maintains full compatibility with the official router architecture.

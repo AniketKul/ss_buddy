@@ -1,0 +1,21 @@
+{
+  "total_queries": 2,
+  "queries_by_subject": {
+    "History": 2
+  },
+  "queries_by_difficulty": {
+    "College": 2
+  },
+  "queries_by_policy": {
+    "task_router": 2
+  },
+  "queries_by_model": {
+    "mistralai/mixtral-8x22b-instruct-v0.1": 1,
+    "meta/llama-3.1-70b-instruct": 1
+  },
+  "average_response_time": 10.170355319976807,
+  "total_response_time": 20.340710639953613,
+  "total_cost": 0.0010244,
+  "total_tokens": 1792,
+  "session_start": "2025-06-13T01:45:53.078354"
+}

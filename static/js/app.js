@@ -139,9 +139,21 @@ class StudyBuddyApp {
         // Update response content
         responseContent.textContent = data.response;
 
-        // Calculate cost from usage if available
-        const cost = data.usage && data.usage.total_tokens ? 
-            (data.usage.total_tokens * 0.0001) : 0; // Rough estimate
+        // Calculate cost from usage using the same method as backend
+        let cost = 0;
+        if (data.usage) {
+            const promptTokens = data.usage.prompt_tokens || 0;
+            const completionTokens = data.usage.completion_tokens || 0;
+            
+            // Use same pricing as backend
+            const promptCostPer1k = 0.0002;  // $0.0002 per 1K prompt tokens
+            const completionCostPer1k = 0.0006;  // $0.0006 per 1K completion tokens
+            
+            const promptCost = (promptTokens / 1000) * promptCostPer1k;
+            const completionCost = (completionTokens / 1000) * completionCostPer1k;
+            
+            cost = promptCost + completionCost;
+        }
 
         // Update metadata with available fields
         responseMeta.innerHTML = `

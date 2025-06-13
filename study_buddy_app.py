@@ -54,15 +54,8 @@ except Exception as e:
 STATS_FILE = 'stats.json'
 
 def load_stats():
-    """Load stats from file or create default stats"""
-    try:
-        if os.path.exists(STATS_FILE):
-            with open(STATS_FILE, 'r') as f:
-                return json.load(f)
-    except Exception as e:
-        logger.warning(f"Failed to load stats: {e}")
-    
-    # Return default stats
+    """Load fresh stats on each app restart"""
+    # Always start with fresh stats on app restart
     return {
         'total_queries': 0,
         'queries_by_subject': {},
@@ -77,7 +70,7 @@ def load_stats():
     }
 
 def save_stats(stats_data):
-    """Save stats to file"""
+    """Save stats to file (for persistence during session)"""
     try:
         with open(STATS_FILE, 'w') as f:
             json.dump(stats_data, f, indent=2)
@@ -85,7 +78,10 @@ def save_stats(stats_data):
         logger.error(f"Failed to save stats: {e}")
 
 def calculate_cost(usage):
-    """Calculate cost based on token usage"""
+    """Calculate cost based on token usage
+    
+    NOTE: Frontend cost calculation in static/js/app.js should match this method exactly
+    """
     if not usage:
         return 0
     
@@ -102,8 +98,16 @@ def calculate_cost(usage):
     
     return prompt_cost + completion_cost
 
-# Load stats on startup
+# Load fresh stats on startup and remove any existing stats file
+if os.path.exists(STATS_FILE):
+    try:
+        os.remove(STATS_FILE)
+        logger.info("Removed previous stats file for fresh start")
+    except Exception as e:
+        logger.warning(f"Failed to remove previous stats file: {e}")
+
 stats = load_stats()
+logger.info("Started with fresh statistics")
 
 @app.route('/')
 def index():

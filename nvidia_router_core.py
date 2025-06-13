@@ -354,8 +354,13 @@ class NVIDIARouterService:
         if config_path:
             self.config = RouterConfig.load_config(config_path)
         else:
-            # Use embedded configuration matching official defaults
-            self.config = self._create_default_config()
+            # Load from default config file instead of hardcoded values
+            default_config_path = 'nvidia_router_config.yaml'
+            if os.path.exists(default_config_path):
+                self.config = RouterConfig.load_config(default_config_path)
+            else:
+                # Use embedded configuration matching official defaults
+                self.config = self._create_default_config()
         
         self.router_core = NVIDIALLMRouterCore(self.config)
         

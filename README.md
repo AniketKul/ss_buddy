@@ -49,6 +49,62 @@ User Query → nim-llm-router params → Policy Selection → Classification →
 - **Contextual-Knowledge** → `meta/llama-3.1-8b-instruct`
 - And more...
 
+## 🧠 How LLM Routing Works
+
+The Smart Study Buddy uses a sophisticated 5-step routing process to automatically select the most appropriate AI model for each query:
+
+### Step 1: Query Analysis
+When you submit a question, the system first analyzes your input to understand what type of task you're requesting:
+- **Educational Context**: Detects the subject (Math, Science, Literature, etc.) and difficulty level
+- **Task Type**: Identifies whether you're asking for explanations, code generation, creative writing, etc.
+- **Complexity Assessment**: Determines if the query requires simple factual answers or complex reasoning
+
+### Step 2: Policy Selection
+Based on your query, the system chooses between two routing strategies:
+- **Task Router**: Routes based on what you want to do (explain, code, summarize, chat, etc.)
+- **Complexity Router**: Routes based on how complex your request is (reasoning, creativity, domain knowledge, etc.)
+
+### Step 3: AI Classification
+Your query is sent to a Triton inference server that runs a specialized classification model:
+- **Machine Learning Classification**: Uses pre-trained models to analyze your text
+- **Probability Distribution**: Returns confidence scores for different categories
+- **Real-time Processing**: Classification happens in milliseconds
+
+**Example Classification:**
+```
+Query: "Can you help me write a Python function to calculate fibonacci numbers?"
+→ Task Classification: Code Generation (85% confidence)
+→ Selected Model: nvidia/llama-3.3-nemotron-super-49b-v1
+```
+
+### Step 4: Model Selection
+Based on the classification results, the system automatically selects the optimal model:
+- **Specialized Models**: Each model excels at different types of tasks
+- **Cost Optimization**: Smaller models for simple tasks, larger models for complex reasoning
+- **Performance Balance**: Optimizes for both quality and response time
+
+**Model Specializations:**
+- **Code Tasks** → Nemotron (specialized for programming)
+- **Creative Writing** → Llama 70B (excellent for creative tasks)
+- **Simple Q&A** → Llama 8B (fast and efficient)
+- **Complex Reasoning** → Nemotron or Llama 70B (powerful reasoning capabilities)
+
+### Step 5: Response Generation
+The selected model processes your query and generates a response:
+- **Educational Enhancement**: Adds step-by-step explanations for learning
+- **Contextual Adaptation**: Adjusts complexity based on detected difficulty level
+- **Quality Assurance**: Ensures responses are appropriate for educational use
+
+### Why This Matters
+
+**Cost Efficiency**: By using smaller models for simple tasks and larger models only when needed, the system reduces costs by 2-5x compared to always using the largest model.
+
+**Quality Optimization**: Each model is chosen for its strengths, resulting in better responses than a one-size-fits-all approach.
+
+**Speed**: Simple queries get fast responses from efficient models, while complex queries get the computational power they need.
+
+**Learning-Focused**: The routing considers educational value, ensuring responses help you learn rather than just providing answers.
+
 ## 🚀 Quick Start
 
 ### Prerequisites

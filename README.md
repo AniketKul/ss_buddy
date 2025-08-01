@@ -1,6 +1,5 @@
 # Smart Study Buddy - Educational AI Assistant
 
-
 **Powered by the Official NVIDIA LLM Router Framework**
 
 An intelligent educational assistant that uses the **exact same core logic** as the [official NVIDIA LLM Router](https://github.com/NVIDIA-AI-Blueprints/llm-router) to route educational queries to the most appropriate AI models for optimal learning experiences.

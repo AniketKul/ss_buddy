@@ -32,6 +32,8 @@ This application implements the exact same routing architecture as the official 
 User Query → nim-llm-router params → Policy Selection → Classification → Model Selection → Response
 ```
 
+![Smart Study Buddy Architecture](ss_buddy_arch_using_dpu.png)
+
 ### Routing Policies
 
 **Task Router Policy** - Classifies queries by task type:

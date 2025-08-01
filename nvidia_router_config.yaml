@@ -1,6 +1,6 @@
 policies:
   - name: "task_router"
-    url: http://10.185.98.229:30800/v2/models/task_router_ensemble/infer
+    url: http://localhost:8000/v2/models/task_router_ensemble/infer
     llms:
       - name: Brainstorming
         api_base: https://integrate.api.nvidia.com
@@ -51,7 +51,7 @@ policies:
         api_key: ${NVIDIA_API_KEY}
         model: meta/llama-3.1-8b-instruct
   - name: "complexity_router"
-    url: http://10.185.98.229:30800/v2/models/complexity_router_ensemble/infer
+    url: http://localhost:8000/v2/models/complexity_router_ensemble/infer
     llms:
       - name: Creativity
         api_base: https://integrate.api.nvidia.com

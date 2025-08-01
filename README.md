@@ -34,11 +34,12 @@ User Query → nim-llm-router params → Policy Selection → Classification →
 
 ![Smart Study Buddy Architecture](ss_buddy_arch_using_dpu.png)
 
-![Study Buddy Component 1](ss_buddy_1.png)
 
-![Study Buddy Component 2](ss_buddy_2.png)
+![](ss_buddy_1.png)
 
-![Study Buddy Component 3](ss_buddy_3.png)
+![](ss_buddy_2.png)
+
+![](ss_buddy_3.png)
 
 
 ### Routing Policies

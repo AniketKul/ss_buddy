@@ -152,7 +152,11 @@ kubectl get svc -n triton
 
 5. **Run the application**
 ```bash
-python study_buddy_app.py
+
+$ python3 -m venv venv
+$ source venv/bin/activate
+$ pip install -r requirements.txt
+$ python study_buddy_app.py
 ```
 
 6. **Open your browser**

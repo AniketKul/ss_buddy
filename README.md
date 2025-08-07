@@ -120,7 +120,7 @@ The selected model processes your query and generates a response:
 ### Prerequisites
 - Python 3.8+
 - NVIDIA API Key ([Get one here](https://build.nvidia.com/))
-- Kubernetes cluster (for Triton deployment)
+- Docker (for Triton deployment)
 
 ### Installation
 
@@ -140,24 +140,47 @@ pip install -r requirements.txt
 Create a `.env` file in the project root:
 ```bash
 # Study Buddy Configuration
-SECRET_KEY=study-buddy-dev-secret-key
+SECRET_KEY=study-buddy-dev-secret-key # Optional
 FLASK_ENV=development
 
 # NVIDIA API Catalog Configuration
-NVIDIA_API_KEY="your-nvidia-api-key-here"
+NVIDIA_API_KEY="your-nvidia-api-key-here" # Mandatory
 
 # Server Configuration
 PORT=5000
 HOST=0.0.0.0
 ```
 
-4. **Deploy Triton Server (Kubernetes)**
+4. **Deploy Triton Server (using docker)**
 ```bash
-# Deploy Triton server with NodePort
-kubectl apply -f triton-deployment.yaml
+# Deploy Triton server with docker
 
-# Verify deployment
-kubectl get svc -n triton
+# Create model repository directory
+mkdir -p /tmp/triton-models
+
+# Copy models from the repo to the model repository directory
+cp -r models/* /tmp/triton-models/
+
+# Pull the Triton server image
+docker pull nvcr.io/nvidia/tritonserver:24.01-py3
+
+# Run Triton server (CPU-only, no GPU flags)
+docker run -d --name triton-server \
+  -p 8000:8000 -p 8001:8001 -p 8002:8002 \
+  -v /tmp/triton-models:/models nvcr.io/nvidia/tritonserver:24.01-py3 \
+  tritonserver --model-repository=/models  --log-verbose=1
+
+# Verify it's running
+docker ps | grep triton
+curl http://localhost:8000/v2/health/ready
+
+# Test model endpoints
+curl -X POST http://localhost:8000/v2/models/task_router_ensemble/infer \
+  -H "Content-Type: application/json" \
+  -d '{"inputs":[{"name":"INPUT","datatype":"BYTES","shape":[1,1],"data":[["test"]]}]}'
+
+# Check logs for CPU-only confirmation
+docker logs triton-server | grep -i "gpu\|cpu\|cuda"
 ```
 
 5. **Run the application**
@@ -166,6 +189,9 @@ kubectl get svc -n triton
 $ python3 -m venv venv
 $ source venv/bin/activate
 $ pip install -r requirements.txt
+# Create environment file
+$ cp .env.example .env
+# Edit .env with your configuration
 $ python study_buddy_app.py
 ```
 
@@ -243,8 +269,8 @@ The `nvidia_router_config.yaml` file contains the official NVIDIA LLM Router con
 - Check that `load_dotenv()` is working in Python files
 
 **2. Triton Server Connection Failed**
-- Verify Kubernetes service: `kubectl get svc -n triton`
-- Check NodePort accessibility: `curl http://10.185.98.229:30800/v2/health/ready`
+- Verify Docker container: `docker ps | grep triton`
+- Check port accessibility: `curl http://localhost:8000/v2/health/ready`
 
 **3. Application Health Check**
 ```bash

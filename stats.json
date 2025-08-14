@@ -1,26 +1,27 @@
 {
-  "total_queries": 10,
+  "total_queries": 5,
   "queries_by_subject": {
-    "General": 8,
-    "History": 2
+    "History": 1,
+    "General": 3,
+    "Computer Science": 1
   },
   "queries_by_difficulty": {
-    "Elementary": 6,
-    "High School": 3,
-    "College": 1
+    "College": 2,
+    "Elementary": 2,
+    "High School": 1
   },
   "queries_by_policy": {
-    "task_router": 10
+    "task_router": 5
   },
   "queries_by_model": {
-    "nvidia/llama-3.3-nemotron-super-49b-v1": 2,
-    "mistralai/mixtral-8x22b-instruct-v0.1": 4,
-    "meta/llama-3.1-8b-instruct": 2,
-    "meta/llama-3.1-70b-instruct": 2
+    "meta/llama-3.1-70b-instruct": 1,
+    "mistralai/mixtral-8x22b-instruct-v0.1": 2,
+    "nvidia/llama-3.3-nemotron-super-49b-v1": 1,
+    "meta/llama-3.1-8b-instruct": 1
   },
-  "average_response_time": 5.539317607879639,
-  "total_response_time": 55.39317607879639,
-  "total_cost": 0.0026517999999999997,
-  "total_tokens": 4835,
-  "session_start": "2025-07-10T21:15:48.300526"
+  "average_response_time": 2.0092474937438967,
+  "total_response_time": 10.046237468719482,
+  "total_cost": 0.000406,
+  "total_tokens": 920,
+  "session_start": "2025-08-14T23:48:13.361068"
 }

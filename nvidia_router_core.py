@@ -9,6 +9,8 @@ This implementation follows the exact same logic as the official Rust implementa
 3. Use Triton inference server for classification
 4. Route to appropriate model based on classification
 5. Proxy request to selected model with OpenAI-compatible API
+
+MOCK INTEGRATION: Added support for mocking NVIDIA API catalog responses while preserving Triton classification.
 """
 
 import os
@@ -25,6 +27,13 @@ import yaml
 # Load environment variables from .env file
 from dotenv import load_dotenv
 load_dotenv()
+
+# Import mock system
+try:
+    from nvidia_api_mock import nvidia_api_mock
+    MOCK_AVAILABLE = True
+except ImportError:
+    MOCK_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -149,11 +158,19 @@ class NVIDIALLMRouterCore:
     3. For triton: call classification server and get model index
     4. For manual: use specified model directly
     5. Route request to selected model
+    
+    MOCK INTEGRATION: Added support for mocking NVIDIA API responses while preserving Triton classification.
     """
     
-    def __init__(self, config: RouterConfig):
+    def __init__(self, config: RouterConfig, enable_mocking: bool = True):
         self.config = config
         self.client = requests.Session()
+        self.enable_mocking = enable_mocking and MOCK_AVAILABLE
+        
+        if self.enable_mocking:
+            logger.info("🎭 Mock mode enabled for NVIDIA API catalog responses")
+        else:
+            logger.info("🔗 Live mode - will make real API calls to NVIDIA")
     
     def extract_nim_llm_router_params(self, request_body: Dict[str, Any]) -> Optional[NimLlmRouterParams]:
         """Extract nim-llm-router parameters from request body"""
@@ -206,7 +223,10 @@ class NVIDIALLMRouterCore:
         return ''
     
     async def choose_model_with_triton(self, policy: Policy, text_input: str, threshold: float = 0.5) -> int:
-        """Choose model using Triton inference server classification"""
+        """Choose model using Triton inference server classification
+        
+        NOTE: This method is NOT mocked - it makes real calls to Triton classification servers
+        """
         logger.info(f"Using policy: {policy.name}")
         logger.info(f"Triton input text: {text_input}")
         
@@ -222,7 +242,7 @@ class NVIDIALLMRouterCore:
             ]
         }
         
-        # Make request to Triton server
+        # Make request to Triton server (NOT MOCKED)
         headers = {'Content-Type': 'application/json'}
         
         response = self.client.post(
@@ -267,6 +287,10 @@ class NVIDIALLMRouterCore:
         modified_body = request_body.copy()
         modified_body['model'] = model
         return modified_body
+    
+    def _is_nvidia_api_catalog_call(self, url: str) -> bool:
+        """Check if this is a call to NVIDIA API catalog that should be mocked"""
+        return "integrate.api.nvidia.com" in url
     
     async def route_request(self, request_body: Dict[str, Any]) -> Tuple[Dict[str, Any], str, str]:
         """
@@ -318,38 +342,55 @@ class NVIDIALLMRouterCore:
         cleaned_body = self.remove_nim_llm_router_params(request_body)
         final_body = self.modify_model_in_request(cleaned_body, chosen_llm.model)
         
-        # Step 7: Make request to chosen LLM
-        headers = {
-            'Accept': 'application/json',
-            'Authorization': f'Bearer {chosen_llm.api_key}',
-            'Content-Type': 'application/json'
-        }
-        
-        # Construct full URL
+        # Step 7: Make request to chosen LLM (WITH MOCK SUPPORT)
         url = f"{chosen_llm.api_base}/v1/chat/completions"
         
-        response = self.client.post(
-            url,
-            headers=headers,
-            json=final_body,
-            timeout=60
-        )
+        # Check if we should mock this call
+        if self.enable_mocking and self._is_nvidia_api_catalog_call(url):
+            logger.info(f"🎭 Using mock response for model: {chosen_llm.model}")
+            
+            # Generate mock response
+            response_data = nvidia_api_mock.generate_chat_completion_response(final_body, chosen_llm.model)
+            
+            # Add mock indicator to response metadata
+            response_data['_mock_response'] = True
+            response_data['_mock_model'] = chosen_llm.model
+            
+        else:
+            # Make real API call
+            logger.info(f"🔗 Making real API call to: {url}")
+            
+            headers = {
+                'Accept': 'application/json',
+                'Authorization': f'Bearer {chosen_llm.api_key}',
+                'Content-Type': 'application/json'
+            }
+            
+            response = self.client.post(
+                url,
+                headers=headers,
+                json=final_body,
+                timeout=60
+            )
+            
+            if not response.ok:
+                error_msg = f"LLM service error: {response.status_code} - {response.text}"
+                logger.error(error_msg)
+                raise Exception(error_msg)
+            
+            response_data = response.json()
         
-        if not response.ok:
-            error_msg = f"LLM service error: {response.status_code} - {response.text}"
-            logger.error(error_msg)
-            raise Exception(error_msg)
-        
-        response_data = response.json()
         return response_data, chosen_llm.model, chosen_classifier
 
 class NVIDIARouterService:
     """
     Service wrapper that provides educational enhancements on top of the core NVIDIA LLM Router.
     This maintains the exact official routing logic while adding educational context.
+    
+    MOCK INTEGRATION: Added support for controlling mock mode via environment variables.
     """
     
-    def __init__(self, config_path: str = None):
+    def __init__(self, config_path: str = None, enable_mocking: bool = None):
         # Load official NVIDIA LLM Router configuration
         if config_path:
             self.config = RouterConfig.load_config(config_path)
@@ -362,7 +403,13 @@ class NVIDIARouterService:
                 # Use embedded configuration matching official defaults
                 self.config = self._create_default_config()
         
-        self.router_core = NVIDIALLMRouterCore(self.config)
+        # Determine mocking mode
+        if enable_mocking is None:
+            # Check environment variable
+            mock_env = os.getenv('NVIDIA_MOCK_MODE', 'true').lower()
+            enable_mocking = mock_env in ('true', '1', 'yes', 'on')
+        
+        self.router_core = NVIDIALLMRouterCore(self.config, enable_mocking=enable_mocking)
         
         # Educational enhancements (kept separate from core routing logic)
         self.subject_patterns = {
